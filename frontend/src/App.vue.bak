@@ -1,0 +1,258 @@
+<template>
+  <div class="app-container">
+    <!-- 已登录：显示导航栏和侧边栏 -->
+    <div v-if="isLoggedIn" class="authenticated-layout">
+      <!-- 顶部导航栏 -->
+      <el-header class="app-header">
+        <div class="header-left">
+          <h1 class="logo">手机进销存系统</h1>
+        </div>
+        <div class="header-right">
+          <el-dropdown @command="handleUserCommand">
+            <span class="el-dropdown-link">
+              {{ currentUser.username }} <el-icon><arrow-down /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+                <el-dropdown-item command="changePassword">修改密码</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </el-header>
+
+      <!-- 主内容区域 -->
+      <div class="app-main">
+        <!-- 侧边栏 -->
+        <el-aside width="200px" class="app-sidebar">
+          <el-menu
+            :default-active="$route.path"
+            class="sidebar-menu"
+            :collapse="false"
+            router
+          >
+            <el-menu-item index="/dashboard">
+              <el-icon><House /></el-icon>
+              <span>仪表盘</span>
+            </el-menu-item>
+            
+            <el-sub-menu index="/inventory">
+              <template #title>
+                <el-icon><Box /></el-icon>
+                <span>库存管理</span>
+              </template>
+              <el-menu-item index="/inventory/list">库存查询</el-menu-item>
+              <el-menu-item index="/inventory/inbound">入库管理</el-menu-item>
+              <el-menu-item index="/inventory/outbound">出库管理</el-menu-item>
+              <el-menu-item index="/inventory/adjust">库存调整</el-menu-item>
+            </el-sub-menu>
+            
+            <el-sub-menu index="/products">
+              <template #title>
+                <el-icon><Goods /></el-icon>
+                <span>商品管理</span>
+              </template>
+              <el-menu-item index="/products/brands">品牌管理</el-menu-item>
+              <el-menu-item index="/products/models">型号管理</el-menu-item>
+            </el-sub-menu>
+            
+            <el-sub-menu index="/trade">
+              <template #title>
+                <el-icon><ShoppingCart /></el-icon>
+                <span>贸易管理</span>
+              </template>
+              <el-menu-item index="/trade/suppliers">供应商管理</el-menu-item>
+              <el-menu-item index="/trade/customers">客户管理</el-menu-item>
+              <el-menu-item index="/trade/purchases">采购管理</el-menu-item>
+              <el-menu-item index="/trade/sales">销售管理</el-menu-item>
+            </el-sub-menu>
+            
+            <el-sub-menu index="/finance">
+              <template #title>
+                <el-icon><Money /></el-icon>
+                <span>财务管理</span>
+              </template>
+              <el-menu-item index="/finance/receivables">应收账款</el-menu-item>
+              <el-menu-item index="/finance/payables">应付账款</el-menu-item>
+              <el-menu-item index="/finance/profit">利润查询</el-menu-item>
+              <el-menu-item index="/finance/rebate">返利管理</el-menu-item>
+            </el-sub-menu>
+            
+            <el-menu-item index="/reports" v-if="currentUser.role === 'admin' || currentUser.role === 'manager'">
+              <el-icon><Document /></el-icon>
+              <span>报表中心</span>
+            </el-menu-item>
+            
+            <el-menu-item index="/users" v-if="currentUser.role === 'admin'">
+              <el-icon><User /></el-icon>
+              <span>用户管理</span>
+            </el-menu-item>
+          </el-menu>
+        </el-aside>
+
+        <!-- 内容区 -->
+        <el-main class="app-content">
+          <router-view />
+        </el-main>
+      </div>
+    </div>
+    
+    <!-- 未登录：只显示router-view内容（如登录页） -->
+    <div v-else class="unauthenticated-layout">
+      <router-view />
+    </div>
+  </div>
+</template>
+
+<script>
+import { computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from './stores/user'
+import { 
+  ArrowDown, 
+  House, 
+  Box, 
+  Goods, 
+  ShoppingCart, 
+  Money, 
+  Document, 
+  User
+} from '@element-plus/icons-vue'
+
+export default {
+  name: 'App',
+  components: {
+    ArrowDown,
+    House,
+    Box,
+    Goods,
+    ShoppingCart,
+    Money,
+    Document,
+    User
+  },
+  setup() {
+    const router = useRouter()
+    const route = useRoute()
+    const userStore = useUserStore()
+    
+    const isLoggedIn = computed(() => userStore.isLoggedIn)
+    const currentUser = computed(() => userStore.currentUser)
+    
+    const handleLogout = async () => {
+      try {
+        await userStore.logout()
+        ElMessage.success('已退出登录')
+        router.push('/login')
+      } catch (error) {
+        ElMessage.error('退出登录失败')
+      }
+    }
+    
+    const handleUserCommand = (command) => {
+      switch(command) {
+        case 'logout':
+          handleLogout()
+          break
+        case 'profile':
+          router.push('/profile')
+          break
+        case 'changePassword':
+          router.push('/change-password')
+          break
+      }
+    }
+    
+    // 检查登录状态
+    onMounted(() => {
+      if (userStore.token) {
+        userStore.fetchCurrentUser()
+      }
+    })
+    
+    return {
+      isLoggedIn,
+      currentUser,
+      handleUserCommand
+    }
+  }
+}
+</script>
+
+<style scoped>
+.app-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.authenticated-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #409EFF;
+  color: white;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.logo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.el-dropdown-link {
+  cursor: pointer;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  background-color: #ffffff;
+  border-right: 1px solid #e6e6e6;
+  height: calc(100vh - 60px); /* 减去header高度 */
+  overflow-y: auto;
+}
+
+.sidebar-menu {
+  border: none;
+  height: 100%;
+}
+
+.app-content {
+  background-color: #f5f5f5;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.unauthenticated-layout {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+</style>
