@@ -11,18 +11,8 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "http://35.166.19.193:8081/api/$1"
-    },
-    {
       "src": "/(.*)",
-      "dest": "frontend/dist/$1"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "http://35.166.19.193:8081/api/$1"
+      "dest": "frontend/dist/index.html"
     }
   ]
 }
