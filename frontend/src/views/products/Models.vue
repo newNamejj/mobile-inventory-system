@@ -37,9 +37,9 @@
             ¥{{ scope.row.purchase_price }}
           </template>
         </el-table-column>
-        <el-table-column prop="sale_price" label="销售价" width="120">
+        <el-table-column prop="retail_price" label="销售价" width="120">
           <template #default="scope">
-            ¥{{ scope.row.sale_price }}
+            ¥{{ scope.row.retail_price }}
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180"></el-table-column>
@@ -302,7 +302,7 @@ export default {
                 brand_id: currentModel.brand_id,
                 specifications: currentModel.specifications,
                 purchase_price: currentModel.purchase_price,
-                sale_price: currentModel.sale_price,
+                retail_price: currentModel.sale_price,
                 min_stock_level: currentModel.min_stock_level
               })
             } else {
@@ -312,7 +312,7 @@ export default {
                 brand_id: currentModel.brand_id,
                 specifications: currentModel.specifications,
                 purchase_price: currentModel.purchase_price,
-                sale_price: currentModel.sale_price,
+                retail_price: currentModel.sale_price,
                 min_stock_level: currentModel.min_stock_level
               })
             }
