@@ -25,7 +25,7 @@
             </div>
             
             <el-table :data="salesReportData" style="width: 100%" v-loading="salesLoading">
-              <el-table-column prop="id" label="订单号" width="120"></el-table-column>
+              <el-table-column prop="order_number" label="订单号" width="120"></el-table-column>
               <el-table-column prop="customer_name" label="客户" width="200"></el-table-column>
               <el-table-column prop="total_amount" label="订单金额" width="120">
                 <template #default="scope">
@@ -75,7 +75,7 @@
             </div>
             
             <el-table :data="purchaseReportData" style="width: 100%" v-loading="purchaseLoading">
-              <el-table-column prop="id" label="订单号" width="120"></el-table-column>
+              <el-table-column prop="order_number" label="订单号" width="120"></el-table-column>
               <el-table-column prop="supplier_name" label="供应商" width="200"></el-table-column>
               <el-table-column prop="total_amount" label="订单金额" width="120">
                 <template #default="scope">
@@ -175,25 +175,25 @@
               <el-col :span="6">
                 <el-card class="stat-card">
                   <div class="stat-title">销售收入</div>
-                  <div class="stat-value">¥{{ profitSummary.total_sales || 0 }}</div>
+                  <div class="stat-value">¥{{ profitSummary.totalRevenue || 0 }}</div>
                 </el-card>
               </el-col>
               <el-col :span="6">
                 <el-card class="stat-card">
                   <div class="stat-title">采购成本</div>
-                  <div class="stat-value">¥{{ profitSummary.total_purchase || 0 }}</div>
+                  <div class="stat-value">¥{{ profitSummary.totalCost || 0 }}</div>
                 </el-card>
               </el-col>
               <el-col :span="6">
                 <el-card class="stat-card">
                   <div class="stat-title">毛利润</div>
-                  <div class="stat-value">¥{{ profitSummary.gross_profit || 0 }}</div>
+                  <div class="stat-value">¥{{ profitSummary.totalProfit || 0 }}</div>
                 </el-card>
               </el-col>
               <el-col :span="6">
                 <el-card class="stat-card">
                   <div class="stat-title">利润率</div>
-                  <div class="stat-value">{{ profitSummary.profit_margin || 0 }}%</div>
+                  <div class="stat-value">{{ profitSummary.avgProfitMargin || 0 }}%</div>
                 </el-card>
               </el-col>
             </el-row>
@@ -201,21 +201,21 @@
             <el-table :data="profitReportData" style="width: 100%" v-loading="profitLoading">
               <el-table-column prop="model_name" label="商品型号" width="200"></el-table-column>
               <el-table-column prop="brand_name" label="品牌" width="120"></el-table-column>
-              <el-table-column prop="quantity_sold" label="销售数量" width="120"></el-table-column>
-              <el-table-column prop="total_sales" label="销售收入" width="120">
+              <el-table-column prop="quantity" label="销售数量" width="120"></el-table-column>
+              <el-table-column prop="revenue" label="销售收入" width="120">
                 <template #default="scope">
-                  ¥{{ scope.row.total_sales }}
+                  ¥{{ scope.row.revenue }}
                 </template>
               </el-table-column>
-              <el-table-column prop="total_cost" label="采购成本" width="120">
+              <el-table-column prop="cost" label="采购成本" width="120">
                 <template #default="scope">
-                  ¥{{ scope.row.total_cost }}
+                  ¥{{ scope.row.cost }}
                 </template>
               </el-table-column>
-              <el-table-column prop="gross_profit" label="毛利润" width="120">
+              <el-table-column prop="profit" label="毛利润" width="120">
                 <template #default="scope">
-                  <span :class="scope.row.gross_profit >= 0 ? 'profit-positive' : 'profit-negative'">
-                    ¥{{ scope.row.gross_profit }}
+                  <span :class="scope.row.profit >= 0 ? 'profit-positive' : 'profit-negative'">
+                    ¥{{ scope.row.profit }}
                   </span>
                 </template>
               </el-table-column>
@@ -226,7 +226,7 @@
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column prop="report_date" label="统计日期" width="180"></el-table-column>
+              <el-table-column prop="created_at" label="统计日期" width="180"></el-table-column>
             </el-table>
             
             <el-pagination
