@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "name": "mobile-inventory-frontend",
-  "public": true,
   "builds": [
     {
       "src": "frontend/package.json",
@@ -13,8 +11,18 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "http://35.166.19.193:8081/api/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "frontend/dist/$1"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "http://35.166.19.193:8081/api/$1"
     }
   ]
 }
