@@ -119,10 +119,10 @@ router.get('/:id', authenticateToken, (req, res) => {
 router.post('/', authenticateToken, checkPermission(['admin', 'manager']), (req, res) => {
     const { brand_id, model_name, specifications, purchase_price, retail_price, wholesale_price, imei_required } = req.body;
     
-    if (!brand_id || !model_name || !purchase_price || !retail_price) {
+    if (!brand_id || !model_name) {
         return res.status(400).json({ 
             success: false, 
-            message: '品牌ID、型号名称、采购价和零售价不能为空' 
+            message: '品牌ID和型号名称不能为空' 
         });
     }
     
@@ -207,10 +207,10 @@ router.put('/:id', authenticateToken, checkPermission(['admin', 'manager']), (re
     const modelId = req.params.id;
     const { brand_id, model_name, specifications, purchase_price, retail_price, wholesale_price, imei_required } = req.body;
     
-    if (!brand_id || !model_name || !purchase_price || !retail_price) {
+    if (!brand_id || !model_name) {
         return res.status(400).json({ 
             success: false, 
-            message: '品牌ID、型号名称、采购价和零售价不能为空' 
+            message: '品牌ID和型号名称不能为空' 
         });
     }
     
