@@ -293,10 +293,7 @@ export default {
     const fetchSalesReport = async () => {
       salesLoading.value = true
       try {
-        const params = {
-          page: salesCurrentPage.value,
-          limit: salesPageSize.value
-        }
+        const params = {}
         
         if (salesDateRange.value && salesDateRange.value.length === 2) {
           params.startDate = salesDateRange.value[0].toISOString().split('T')[0]
@@ -307,7 +304,7 @@ export default {
         
         if (response.data.success) {
           salesReportData.value = response.data.data.list
-          salesTotal.value = response.data.data.pagination.total
+          salesTotal.value = response.data.data.summary.totalCount || response.data.data.list?.length || 0
         } else {
           ElMessage.error(response.data.message || '获取销售报表失败')
         }
@@ -323,10 +320,7 @@ export default {
     const fetchPurchaseReport = async () => {
       purchaseLoading.value = true
       try {
-        const params = {
-          page: purchaseCurrentPage.value,
-          limit: purchasePageSize.value
-        }
+        const params = {}
         
         if (purchaseDateRange.value && purchaseDateRange.value.length === 2) {
           params.startDate = purchaseDateRange.value[0].toISOString().split('T')[0]
@@ -337,7 +331,7 @@ export default {
         
         if (response.data.success) {
           purchaseReportData.value = response.data.data.list
-          purchaseTotal.value = response.data.data.pagination.total
+          purchaseTotal.value = response.data.data.summary.totalCount || response.data.data.list?.length || 0
         } else {
           ElMessage.error(response.data.message || '获取采购报表失败')
         }
@@ -353,17 +347,17 @@ export default {
     const fetchInventoryReport = async () => {
       inventoryLoading.value = true
       try {
-        const params = {
-          page: inventoryCurrentPage.value,
-          limit: inventoryPageSize.value,
-          keyword: inventoryKeyword.value
+        const params = {}
+        
+        if (inventoryKeyword.value) {
+          params.keyword = inventoryKeyword.value
         }
         
         const response = await request.get('/api/reports/inventory-report', { params })
         
         if (response.data.success) {
           inventoryReportData.value = response.data.data.list
-          inventoryTotal.value = response.data.data.pagination.total
+          inventoryTotal.value = response.data.data.summary.totalCount || response.data.data.list?.length || 0
         } else {
           ElMessage.error(response.data.message || '获取库存报表失败')
         }
@@ -379,10 +373,7 @@ export default {
     const fetchProfitReport = async () => {
       profitLoading.value = true
       try {
-        const params = {
-          page: profitCurrentPage.value,
-          limit: profitPageSize.value
-        }
+        const params = {}
         
         if (profitDateRange.value && profitDateRange.value.length === 2) {
           params.startDate = profitDateRange.value[0].toISOString().split('T')[0]
@@ -394,7 +385,7 @@ export default {
         if (response.data.success) {
           profitReportData.value = response.data.data.list
           profitSummary.value = response.data.data.summary
-          profitTotal.value = response.data.data.pagination.total
+          profitTotal.value = response.data.data.summary.totalCount || response.data.data.list?.length || 0
         } else {
           ElMessage.error(response.data.message || '获取利润报表失败')
         }

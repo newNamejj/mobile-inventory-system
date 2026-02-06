@@ -354,46 +354,71 @@ router.put('/orders/:id/status', authenticateToken, checkPermission(['admin', 'm
             
             // 如果订单状态变为完成，执行入库操作
             if (status === 'completed') {
-                // 获取订单明细
-                const itemsQuery = 'SELECT model_id, quantity FROM purchase_order_items WHERE purchase_order_id = ?';
+                // 获取订单信息
+                const getOrderQuery = 'SELECT supplier_id, total_amount FROM purchase_orders WHERE id = ?';
                 
-                db.all(itemsQuery, [orderId], (err, items) => {
+                db.get(getOrderQuery, [orderId], (err, order) => {
                     if (err) {
-                        console.error('获取订单明细错误:', err);
-                        // 不中断响应，入库操作可以异步处理
+                        console.error('获取采购订单信息错误:', err);
+                        // 即使出错也继续处理其他逻辑
                     } else {
-                        // 对每个商品执行入库操作
-                        for (const item of items) {
-                            // 更新库存数量
-                            const updateInventoryQuery = `
-                                INSERT OR REPLACE INTO inventory (model_id, quantity, available_quantity, min_stock_level, last_updated)
-                                SELECT 
-                                    ?, 
-                                    COALESCE((SELECT quantity FROM inventory WHERE model_id = ?), 0) + ?,
-                                    COALESCE((SELECT available_quantity FROM inventory WHERE model_id = ?), 0) + ?,
-                                    COALESCE(min_stock_level, 0),
-                                    CURRENT_TIMESTAMP
-                                FROM inventory WHERE model_id = ? UNION ALL 
-                                SELECT ?, ?, ?, 0, CURRENT_TIMESTAMP 
-                                WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE model_id = ?)
-                            `;
-                            
-                            db.run(updateInventoryQuery, [
-                                item.model_id, item.model_id, item.quantity,
-                                item.model_id, item.quantity,
-                                item.model_id,
-                                item.model_id, item.quantity, item.quantity
-                            ]);
-                            
-                            // 记录库存变动
-                            const insertTransactionQuery = `
-                                INSERT INTO inventory_transactions (model_id, transaction_type, quantity, related_table, related_id, remarks, created_by)
-                                VALUES (?, 'in', ?, 'purchase_orders', ?, '采购入库', ?)
-                            `;
-                            
-                            db.run(insertTransactionQuery, [item.model_id, item.quantity, orderId, req.user.userId]);
-                        }
+                        // 创建应付款记录
+                        const insertPayableQuery = `
+                            INSERT INTO payments_payables (supplier_id, related_table, related_id, amount, paid_amount, status, remarks)
+                            VALUES (?, 'purchase_orders', ?, ?, 0, 'unpaid', '采购订单应付')
+                        `;
+                        
+                        db.run(insertPayableQuery, [order.supplier_id, orderId, order.total_amount], function(err) {
+                            if (err) {
+                                console.error('创建应付款记录错误:', err);
+                                // 不中断主流程，仅记录错误
+                            } else {
+                                console.log(`为采购订单 ${orderId} 创建了应付款记录，ID: ${this.lastID}`);
+                            }
+                        });
                     }
+                    
+                    // 获取订单明细
+                    const itemsQuery = 'SELECT model_id, quantity FROM purchase_order_items WHERE purchase_order_id = ?';
+                    
+                    db.all(itemsQuery, [orderId], (err, items) => {
+                        if (err) {
+                            console.error('获取订单明细错误:', err);
+                            // 不中断响应，入库操作可以异步处理
+                        } else {
+                            // 对每个商品执行入库操作
+                            for (const item of items) {
+                                // 更新库存数量
+                                const updateInventoryQuery = `
+                                    INSERT OR REPLACE INTO inventory (model_id, quantity, available_quantity, min_stock_level, last_updated)
+                                    SELECT 
+                                        ?, 
+                                        COALESCE((SELECT quantity FROM inventory WHERE model_id = ?), 0) + ?,
+                                        COALESCE((SELECT available_quantity FROM inventory WHERE model_id = ?), 0) + ?,
+                                        COALESCE(min_stock_level, 0),
+                                        CURRENT_TIMESTAMP
+                                    FROM inventory WHERE model_id = ? UNION ALL 
+                                    SELECT ?, ?, ?, 0, CURRENT_TIMESTAMP 
+                                    WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE model_id = ?)
+                                `;
+                                
+                                db.run(updateInventoryQuery, [
+                                    item.model_id, item.model_id, item.quantity,
+                                    item.model_id, item.quantity,
+                                    item.model_id,
+                                    item.model_id, item.quantity, item.quantity
+                                ]);
+                                
+                                // 记录库存变动
+                                const insertTransactionQuery = `
+                                    INSERT INTO inventory_transactions (model_id, transaction_type, quantity, related_table, related_id, remarks, created_by)
+                                    VALUES (?, 'in', ?, 'purchase_orders', ?, '采购入库', ?)
+                                `;
+                                
+                                db.run(insertTransactionQuery, [item.model_id, item.quantity, orderId, req.user.userId]);
+                            }
+                        }
+                    });
                 });
             }
             

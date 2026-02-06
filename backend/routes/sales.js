@@ -407,53 +407,78 @@ router.put('/orders/:id/status', authenticateToken, checkPermission(['admin', 'm
             
             // 如果订单状态变为完成，执行出库操作
             if (status === 'completed') {
-                // 获取订单明细
-                const itemsQuery = 'SELECT model_id, quantity FROM sales_order_items WHERE sales_order_id = ?';
+                // 获取订单信息
+                const getOrderQuery = 'SELECT customer_id, final_amount FROM sales_orders WHERE id = ?';
                 
-                db.all(itemsQuery, [orderId], (err, items) => {
+                db.get(getOrderQuery, [orderId], (err, order) => {
                     if (err) {
-                        console.error('获取订单明细错误:', err);
-                        // 不中断响应，出库操作可以异步处理
+                        console.error('获取订单信息错误:', err);
+                        // 即使出错也继续处理其他逻辑
                     } else {
-                        // 对每个商品执行出库操作
-                        for (const item of items) {
-                            // 更新库存数量（减少总库存和可用库存）
-                            const updateInventoryQuery = `
-                                UPDATE inventory 
-                                SET quantity = quantity - ?, available_quantity = available_quantity - ?
-                                WHERE model_id = ?
-                            `;
-                            
-                            db.run(updateInventoryQuery, [item.quantity, item.quantity, item.model_id]);
-                            
-                            // 记录库存变动
-                            const insertTransactionQuery = `
-                                INSERT INTO inventory_transactions (model_id, transaction_type, quantity, related_table, related_id, remarks, created_by)
-                                VALUES (?, 'out', ?, 'sales_orders', ?, '销售出库', ?)
-                            `;
-                            
-                            db.run(insertTransactionQuery, [item.model_id, item.quantity, orderId, req.user.userId]);
-                            
-                            // 记录利润
-                            const recordProfitQuery = `
-                                INSERT INTO profit_records (sales_order_item_id, cost_price, sell_price, quantity, revenue, cost, profit, profit_margin)
-                                SELECT 
-                                    soi.id,
-                                    m.purchase_price,
-                                    soi.unit_price,
-                                    soi.quantity,
-                                    soi.total_price,
-                                    m.purchase_price * soi.quantity,
-                                    soi.total_price - (m.purchase_price * soi.quantity),
-                                    ((soi.total_price - (m.purchase_price * soi.quantity)) / soi.total_price) * 100
-                                FROM sales_order_items soi
-                                LEFT JOIN models m ON soi.model_id = m.id
-                                WHERE soi.sales_order_id = ? AND soi.model_id = ?
-                            `;
-                            
-                            db.run(recordProfitQuery, [orderId, item.model_id]);
-                        }
+                        // 创建应收款记录
+                        const insertReceivableQuery = `
+                            INSERT INTO payments_receivables (customer_id, related_table, related_id, amount, paid_amount, status, remarks)
+                            VALUES (?, 'sales_orders', ?, ?, 0, 'unpaid', '销售订单应收')
+                        `;
+                        
+                        db.run(insertReceivableQuery, [order.customer_id, orderId, order.final_amount], function(err) {
+                            if (err) {
+                                console.error('创建应收款记录错误:', err);
+                                // 不中断主流程，仅记录错误
+                            } else {
+                                console.log(`为订单 ${orderId} 创建了应收款记录，ID: ${this.lastID}`);
+                            }
+                        });
                     }
+                    
+                    // 获取订单明细
+                    const itemsQuery = 'SELECT model_id, quantity FROM sales_order_items WHERE sales_order_id = ?';
+                    
+                    db.all(itemsQuery, [orderId], (err, items) => {
+                        if (err) {
+                            console.error('获取订单明细错误:', err);
+                            // 不中断响应，出库操作可以异步处理
+                        } else {
+                            // 对每个商品执行出库操作
+                            for (const item of items) {
+                                // 更新库存数量（减少总库存和可用库存）
+                                const updateInventoryQuery = `
+                                    UPDATE inventory 
+                                    SET quantity = quantity - ?, available_quantity = available_quantity - ?
+                                    WHERE model_id = ?
+                                `;
+                                
+                                db.run(updateInventoryQuery, [item.quantity, item.quantity, item.model_id]);
+                                
+                                // 记录库存变动
+                                const insertTransactionQuery = `
+                                    INSERT INTO inventory_transactions (model_id, transaction_type, quantity, related_table, related_id, remarks, created_by)
+                                    VALUES (?, 'out', ?, 'sales_orders', ?, '销售出库', ?)
+                                `;
+                                
+                                db.run(insertTransactionQuery, [item.model_id, item.quantity, orderId, req.user.userId]);
+                                
+                                // 记录利润
+                                const recordProfitQuery = `
+                                    INSERT INTO profit_records (sales_order_item_id, cost_price, sell_price, quantity, revenue, cost, profit, profit_margin)
+                                    SELECT 
+                                        soi.id,
+                                        m.purchase_price,
+                                        soi.unit_price,
+                                        soi.quantity,
+                                        soi.total_price,
+                                        m.purchase_price * soi.quantity,
+                                        soi.total_price - (m.purchase_price * soi.quantity),
+                                        ((soi.total_price - (m.purchase_price * soi.quantity)) / soi.total_price) * 100
+                                    FROM sales_order_items soi
+                                    LEFT JOIN models m ON soi.model_id = m.id
+                                    WHERE soi.sales_order_id = ? AND soi.model_id = ?
+                                `;
+                                
+                                db.run(recordProfitQuery, [orderId, item.model_id]);
+                            }
+                        }
+                    });
                 });
             } else if (status === 'cancelled') {
                 // 如果订单取消，释放预留的库存
